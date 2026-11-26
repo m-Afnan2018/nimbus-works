@@ -1,0 +1,42 @@
+import { Router } from 'express';
+import {
+  checkIn,
+  checkOut,
+  lunchStart,
+  lunchStop,
+  markAbsent,
+  getMyAttendance,
+  getUserAttendance,
+  getUserAttendanceStats,
+  getTeamAttendance,
+  getTeamTimeline,
+  getAttendanceStats,
+  updateAttendance,
+  adminCreateAttendance,
+  addNoteToDate,
+  deleteNote,
+} from '../controllers/attendance.controller';
+import { authenticate } from '../middleware/auth.middleware';
+import { authorize } from '../middleware/role.middleware';
+
+const router = Router();
+
+router.use(authenticate);
+
+router.post('/check-in', checkIn);
+router.post('/check-out', checkOut);
+router.post('/lunch-start', lunchStart);
+router.post('/lunch-stop', lunchStop);
+router.post('/mark-absent', markAbsent);
+router.get('/my', getMyAttendance);
+router.get('/user/:userId', authorize('admin'), getUserAttendance);
+router.get('/user/:userId/stats', authorize('admin'), getUserAttendanceStats);
+router.get('/team', authorize('admin', 'manager'), getTeamAttendance);
+router.get('/team/timeline', authorize('admin', 'manager'), getTeamTimeline);
+router.get('/stats', getAttendanceStats);
+router.post('/admin', authorize('admin'), adminCreateAttendance);
+router.put('/:id', authorize('admin'), updateAttendance);
+router.post('/notes', addNoteToDate);
+router.delete('/:id/notes/:noteIndex', deleteNote);
+
+export default router;

@@ -1,0 +1,534 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 640px;
+}
+
+.section {
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Avatar upload button */
+.avatarBtn {
+  position: relative;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.avatarBtn:disabled {
+  cursor: default;
+}
+
+.avatarOverlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+
+.avatarBtn:hover .avatarOverlay,
+.avatarBtn:disabled .avatarOverlay {
+  opacity: 1;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+.profileInfo h3 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.profileInfo p {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.field label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.field input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.notifSettings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+
+/* ── Notification master toggle row ─────────────────────────────────── */
+.notifMasterWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.notifMaster {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.notifMasterInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.notifMasterLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.notifMasterLabel {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.notifMasterDesc {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  max-width: 380px;
+  line-height: 1.4;
+}
+
+.pushDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+.pushResetRow {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.375rem 0.25rem 0;
+}
+
+.pushResetBtn {
+  background: none;
+  border: none;
+  padding: 0.25rem 0.375rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition);
+  letter-spacing: 0.01em;
+}
+
+.pushResetBtn:hover {
+  color: var(--text-secondary);
+  text-decoration: underline;
+}
+
+.pushResetBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pushHelpLink {
+  font-size: 0.8125rem;
+  color: var(--primary);
+  text-decoration: underline;
+  cursor: pointer;
+  margin-top: 0.125rem;
+}
+
+.pushEnableBtn {
+  flex-shrink: 0;
+  padding: 0.5rem 1.125rem;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.pushEnableBtn:hover {
+  background: var(--primary-hover);
+}
+
+.pushEnableBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Pill toggle switch ──────────────────────────────────────────────── */
+.pillToggle {
+  flex-shrink: 0;
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--border);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s ease;
+}
+
+.pillToggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pillToggleOn {
+  background: var(--primary);
+}
+
+.pillThumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease;
+}
+
+.pillToggleOn .pillThumb {
+  transform: translateX(20px);
+}
+
+.dangerZone {
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--danger-light);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dangerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0.875rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.dangerRow:last-child { border-bottom: none; }
+
+.dangerLabel {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.2rem;
+}
+
+.dangerDesc {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.success {
+  color: var(--success);
+  font-size: 0.8125rem;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 0.8125rem;
+}
+
+/* ─── Password field with eye toggle ─────────────────────────────────── */
+.passwordWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.passwordInput {
+  width: 100%;
+  font-size: 0.9rem;
+  padding: 0.5rem 2.5rem 0.5rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  transition: border-color var(--transition);
+  font-family: var(--font-body);
+}
+
+.passwordInput:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.eyeBtn {
+  position: absolute;
+  right: 0.625rem;
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition);
+}
+
+.eyeBtn:hover {
+  color: var(--text-primary);
+}
+
+/* ─── Confirmation dialog ─────────────────────────────────────────────── */
+.confirmText {
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* ─── Success popup overlay ───────────────────────────────────────────── */
+.successOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.18s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.successPopup {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 260px;
+  max-width: 340px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+  animation: popIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.82); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.lottieWrap {
+  margin-bottom: 0.25rem;
+}
+
+.successTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.successMsg {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-align: center;
+  margin: 0 0 0.75rem;
+  line-height: 1.5;
+}
+
+/* ─── Departments section ─────────────────────────────────────────── */
+.deptSection {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.deptSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.deptSectionTitle {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.deptManageLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--primary);
+  text-decoration: none;
+  transition: opacity var(--transition);
+}
+
+.deptManageLink:hover {
+  opacity: 0.75;
+  text-decoration: underline;
+}
+
+.deptEmpty {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.deptChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.deptChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  padding: 0.3125rem 0.625rem 0.3125rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--dept-color, var(--primary)) 30%, transparent);
+  background: color-mix(in srgb, var(--dept-color, var(--primary)) 10%, transparent);
+  text-decoration: none;
+  transition: all var(--transition);
+  cursor: pointer;
+}
+
+.deptChip:hover {
+  background: color-mix(in srgb, var(--dept-color, var(--primary)) 20%, transparent);
+  border-color: color-mix(in srgb, var(--dept-color, var(--primary)) 50%, transparent);
+}
+
+.deptDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.deptChipName {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.deptHeadBadge {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.0625rem 0.3125rem;
+  border-radius: 999px;
+  background: #f59e0b22;
+  color: #f59e0b;
+  border: 1px solid #f59e0b44;
+}

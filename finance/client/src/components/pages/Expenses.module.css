@@ -1,0 +1,255 @@
+/* Expenses.module.css */
+
+.grid4mb {
+  margin-bottom: 18px;
+}
+
+.kpiChangeSub {
+  color: var(--text2);
+}
+
+.kpiValueSmall {
+  font-size: 16px;
+}
+
+.emptySmall {
+  font-size: 12px;
+  color: var(--text3);
+  padding: 8px 0;
+}
+
+.emptyCenter {
+  padding: 32px 0;
+  text-align: center;
+}
+
+.emptyCenterMsg {
+  font-size: 13px;
+  color: var(--text3);
+  margin-bottom: 12px;
+}
+
+.amountCell {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.actionRow {
+  display: flex;
+  gap: 6px;
+}
+
+.btnSm {
+  padding: 4px 9px;
+  font-size: 11px;
+}
+
+.btnSmRed {
+  padding: 4px 9px;
+  font-size: 11px;
+  color: var(--red);
+}
+
+.iconSm {
+  font-size: 12px;
+}
+
+.descField {
+  margin-bottom: 8px;
+}
+
+/* Month navigator */
+.monthNav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.monthBtn {
+  padding: 5px 10px;
+  font-size: 13px;
+}
+.monthLabel {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  min-width: 110px;
+  text-align: center;
+}
+.applyBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  margin-left: 8px;
+  color: var(--indigo);
+  border-color: var(--indigo);
+}
+.applyBtn:hover {
+  background: var(--indigo-dim);
+}
+.applyBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.todayBtn {
+  font-size: 12px;
+  color: var(--text3);
+}
+
+/* Category cell with recurring badge */
+.catCell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.recurringBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--amber);
+  background: var(--amber-dim);
+  border: 1px solid var(--amber);
+  border-radius: 20px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+
+/* Status badges */
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.status_paid {
+  color: var(--emerald);
+  background: var(--emerald-dim);
+  border: 1px solid var(--emerald);
+}
+.status_overdue {
+  color: var(--red);
+  background: var(--red-dim);
+  border: 1px solid var(--red);
+}
+.status_due-soon {
+  color: var(--amber);
+  background: var(--amber-dim);
+  border: 1px solid var(--amber);
+}
+.status_pending {
+  color: var(--text3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.statusNone {
+  color: var(--text3);
+  font-size: 13px;
+}
+
+/* Mark as paid green button */
+.btnSmGreen {
+  padding: 4px 9px;
+  font-size: 11px;
+  color: var(--emerald);
+  border-color: var(--emerald);
+}
+.btnSmGreen:hover {
+  background: var(--emerald-dim);
+}
+
+/* Mark as paid popup */
+.payModal {
+  max-width: 420px;
+  width: 100%;
+}
+.payDetails {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.payRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.payRow:last-child {
+  border-bottom: none;
+}
+.payLabel {
+  font-size: 12px;
+  color: var(--text3);
+}
+.payValue {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.payAmount {
+  font-size: 15px;
+  color: var(--emerald);
+}
+.payAmountInput {
+  width: 140px;
+  text-align: right;
+  font-weight: 700;
+  font-size: 14px !important;
+  color: var(--emerald) !important;
+}
+
+.payDateRow {
+  margin-bottom: 16px;
+}
+
+/* Optional label in form */
+.optionalLabel {
+  font-size: 10px;
+  color: var(--text3);
+  font-weight: 400;
+}
+
+/* Recurring checkbox in form */
+.recurringRow {
+  margin-top: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.recurringLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+}
+.recurringCheck {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  accent-color: var(--indigo);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.recurringTitle {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+.recurringSub {
+  display: block;
+  font-size: 11px;
+  color: var(--text3);
+  line-height: 1.4;
+}

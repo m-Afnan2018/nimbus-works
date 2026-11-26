@@ -1,0 +1,162 @@
+# Nimbus Works — public demo stack, sized for a 512 MB VPS.
+#
+#   cp .env.example .env    # then set the secrets
+#   docker compose up -d --build          # on a machine with >= 2 GB RAM
+#   docker compose up -d --no-build       # on the VPS, with images loaded from elsewhere
+#
+# Workspace app → http://127.0.0.1:8080   (gateway: static UI + /api + /socket.io)
+# Finance app   → http://127.0.0.1:8081   (gateway: static UI + /api)
+# Both ports bind to localhost only; put the host's Nginx (TLS) in front —
+# see deploy/nginx/host-site.conf.example.
+#
+# Database: MongoDB Atlas (set MONGO_HOST in .env), or a local `mongo`
+# container when COMPOSE_PROFILES=local-db. Compose appends each database name
+# (demo_pm, demo_private, demo_cfo) and MONGO_OPTIONS to MONGO_HOST.
+#
+# Memory budget (measured with `docker stats`; see README):
+#   workspace-api ~45 MB · finance-api ~35 MB · gateway ~5 MB
+#   reset ~3 MB while idle (Node runs only during the nightly re-seed)
+#   + mongo ~95 MB only with the local-db profile
+# The UIs are static files, so there are no Next.js servers at runtime.
+
+name: nimbus-demo
+
+x-logging: &logging
+  logging:
+    driver: json-file
+    options: { max-size: "5m", max-file: "2" }
+
+x-backend-env: &backend-env
+  NODE_ENV: production
+  TZ: ${TZ:-Asia/Kolkata}
+  DEMO_MODE: ${DEMO_MODE:-true}
+  COOKIE_SECURE: ${COOKIE_SECURE:-false}
+  TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-2}
+  # Cap the V8 heap so Node collects garbage early instead of growing.
+  NODE_OPTIONS: --max-old-space-size=128
+
+# Start after the local mongo when it's enabled; skip the dependency with Atlas.
+x-depends-on-mongo: &depends-on-mongo
+  mongo:
+    condition: service_healthy
+    required: false
+
+x-api-healthcheck: &api-healthcheck
+  healthcheck:
+    test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5000/api/health >/dev/null || exit 1"]
+    interval: 30s
+    timeout: 5s
+    retries: 5
+    start_period: 30s
+
+services:
+  # Local database, only with COMPOSE_PROFILES=local-db (otherwise use Atlas).
+  mongo:
+    image: mongo:7
+    profiles: [local-db]
+    restart: unless-stopped
+    <<: *logging
+    # Smallest WiredTiger cache (256 MB ceiling; the demo data is a few MB),
+    # and no diagnostic data collection thread.
+    command: >
+      --quiet
+      --wiredTigerCacheSizeGB 0.25
+      --setParameter diagnosticDataCollectionEnabled=false
+    mem_limit: 320m
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      # A TCP check instead of `mongosh`, which would start a ~60 MB Node
+      # process on every probe.
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/127.0.0.1/27017"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # ── Workspace (project management & HR) API ──────────────────────────────
+  workspace-api:
+    build: ./workspace/backend
+    image: nimbus-demo/workspace-api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    <<: [*logging, *api-healthcheck]
+    mem_limit: 200m
+    depends_on: *depends-on-mongo
+    environment:
+      <<: *backend-env
+      PORT: "5000"
+      MONGO_URI: ${MONGO_HOST:-mongodb://mongo:27017}/demo_pm?${MONGO_OPTIONS:-maxPoolSize=5}
+      PRIVATE_MONGO_URI: ${MONGO_HOST:-mongodb://mongo:27017}/demo_private?${MONGO_OPTIONS:-maxPoolSize=5}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set JWT_REFRESH_SECRET in .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      CREDENTIALS_ENCRYPTION_KEY: ${CREDENTIALS_ENCRYPTION_KEY:?set CREDENTIALS_ENCRYPTION_KEY in .env}
+      CORS_ORIGIN: ${WORKSPACE_PUBLIC_URL:-http://localhost:8080}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@example.com}
+    volumes:
+      - uploads:/app/uploads
+
+  # ── Finance (CFO dashboard) API ──────────────────────────────────────────
+  finance-api:
+    build: ./finance/server
+    image: nimbus-demo/finance-api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    <<: [*logging, *api-healthcheck]
+    mem_limit: 200m
+    depends_on: *depends-on-mongo
+    environment:
+      <<: *backend-env
+      PORT: "5000"
+      MONGO_URI: ${MONGO_HOST:-mongodb://mongo:27017}/demo_cfo?${MONGO_OPTIONS:-maxPoolSize=5}
+      SHARED_MONGO_URI: ${MONGO_HOST:-mongodb://mongo:27017}/demo_pm?${MONGO_OPTIONS:-maxPoolSize=5}
+      JWT_SECRET: ${FINANCE_JWT_SECRET:?set FINANCE_JWT_SECRET in .env}
+      AUTH_USERNAME: ${FINANCE_USERNAME:-admin@demo.com}
+      AUTH_PASSWORD: ${FINANCE_PASSWORD:-demo1234}
+
+  # ── Demo reset: seeds on first boot, then wipes & re-seeds every 24 h ────
+  reset:
+    build:
+      context: .
+      dockerfile: deploy/reset/Dockerfile
+    image: nimbus-demo/reset:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    init: true          # tini as PID 1, so `docker compose stop` is instant
+    <<: *logging
+    mem_limit: 300m     # only reached during the seed itself
+    depends_on: *depends-on-mongo
+    environment:
+      TZ: ${TZ:-Asia/Kolkata}
+      NODE_OPTIONS: --max-old-space-size=192
+      MONGO_URI: ${MONGO_HOST:-mongodb://mongo:27017}/demo_pm?${MONGO_OPTIONS:-maxPoolSize=5}
+      PRIVATE_MONGO_URI: ${MONGO_HOST:-mongodb://mongo:27017}/demo_private?${MONGO_OPTIONS:-maxPoolSize=5}
+      FINANCE_MONGO_URI: ${MONGO_HOST:-mongodb://mongo:27017}/demo_cfo?${MONGO_OPTIONS:-maxPoolSize=5}
+      CREDENTIALS_ENCRYPTION_KEY: ${CREDENTIALS_ENCRYPTION_KEY:?set CREDENTIALS_ENCRYPTION_KEY in .env}
+      RESET_HOUR_UTC: ${RESET_HOUR_UTC:-3}
+      SEED_ON_START: ${SEED_ON_START:-if-empty}
+
+  # ── Gateway: static UIs + reverse proxy, one origin per app ──────────────
+  gateway:
+    build:
+      context: .
+      dockerfile: deploy/nginx/Dockerfile
+      args:
+        NEXT_PUBLIC_DEMO_MODE: ${DEMO_MODE:-true}
+    image: nimbus-demo/gateway:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    <<: *logging
+    mem_limit: 64m
+    depends_on:
+      workspace-api:
+        condition: service_healthy
+      finance-api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${WORKSPACE_PORT:-8080}:8080"
+      - "127.0.0.1:${FINANCE_PORT:-8081}:8081"
+
+volumes:
+  mongo_data:
+  uploads:

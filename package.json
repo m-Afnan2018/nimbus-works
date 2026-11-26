@@ -1,0 +1,14 @@
+{
+  "name": "nimbus-works-demo",
+  "private": true,
+  "description": "Public portfolio demo: project management, HR & finance suite (fake data).",
+  "scripts": {
+    "install:all": "npm ci --prefix workspace/backend && npm ci --prefix workspace/frontend && npm ci --prefix finance/server && npm ci --prefix finance/client",
+    "seed": "npm run seed --prefix workspace/backend && npm run seed --prefix finance/server",
+    "reset": "npm run seed",
+    "dev:workspace-api": "npm run dev --prefix workspace/backend",
+    "dev:workspace-web": "npm run dev --prefix workspace/frontend",
+    "dev:finance-api": "npm run dev --prefix finance/server",
+    "dev:finance-web": "npm run dev --prefix finance/client"
+  }
+}

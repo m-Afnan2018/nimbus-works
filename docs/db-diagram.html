@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Nimbus Works — Database Architecture</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 40px 24px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #f8fafc;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    margin-bottom: 48px;
+  }
+
+  .apps-row {
+    display: flex;
+    justify-content: center;
+    gap: 80px;
+    margin-bottom: 0;
+  }
+  .app-bubble {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .app-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 2px solid;
+  }
+  .app-label.workspace { border-color: #818cf8; color: #818cf8; background: rgba(129,140,248,0.08); }
+  .app-label.cfo     { border-color: #34d399; color: #34d399; background: rgba(52,211,153,0.08); }
+
+  .connector-svg {
+    display: block;
+    margin: 0 auto;
+    overflow: visible;
+  }
+
+  .dbs-row {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 24px;
+    margin-top: 0;
+  }
+
+  .db-card {
+    border-radius: 16px;
+    border: 2px solid;
+    padding: 20px 20px 24px;
+    width: 230px;
+    position: relative;
+  }
+  .db-card.workspace-private {
+    border-color: #818cf8;
+    background: linear-gradient(145deg, rgba(129,140,248,0.12), rgba(129,140,248,0.04));
+  }
+  .db-card.shared {
+    border-color: #f59e0b;
+    background: linear-gradient(145deg, rgba(245,158,11,0.14), rgba(245,158,11,0.05));
+    width: 210px;
+  }
+  .db-card.cfo-private {
+    border-color: #34d399;
+    background: linear-gradient(145deg, rgba(52,211,153,0.12), rgba(52,211,153,0.04));
+  }
+
+  .db-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .db-icon { font-size: 1.6rem; }
+  .db-name {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    text-align: center;
+  }
+  .db-name.workspace-private { color: #818cf8; }
+  .db-name.shared          { color: #f59e0b; }
+  .db-name.cfo-private     { color: #34d399; }
+
+  .db-container-name {
+    font-size: 0.68rem;
+    color: #64748b;
+    font-family: monospace;
+    text-align: center;
+  }
+
+  .model-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .model-list li {
+    font-size: 0.78rem;
+    padding: 4px 10px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .model-list li::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .db-card.workspace-private .model-list li { background: rgba(129,140,248,0.1); color: #c7d2fe; }
+  .db-card.workspace-private .model-list li::before { background: #818cf8; }
+
+  .db-card.shared .model-list li { background: rgba(245,158,11,0.1); color: #fde68a; }
+  .db-card.shared .model-list li::before { background: #f59e0b; }
+
+  .db-card.cfo-private .model-list li { background: rgba(52,211,153,0.1); color: #a7f3d0; }
+  .db-card.cfo-private .model-list li::before { background: #34d399; }
+
+  .section-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #475569;
+    margin-top: 12px;
+    margin-bottom: 6px;
+    padding-left: 4px;
+  }
+
+  .legend {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-top: 40px;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: #94a3b8;
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+</style>
+</head>
+<body>
+
+<h1>Nimbus Works — Database Architecture</h1>
+<p class="subtitle">7-container Docker setup &nbsp;·&nbsp; 3 MongoDB instances &nbsp;·&nbsp; 2 apps</p>
+
+<!-- App labels -->
+<div class="apps-row">
+  <div class="app-bubble">
+    <span class="app-label workspace">Workspace</span>
+  </div>
+  <div class="app-bubble" style="margin-left:40px">
+    <span class="app-label cfo">CFO</span>
+  </div>
+</div>
+
+<!-- SVG connectors -->
+<svg class="connector-svg" width="740" height="80" viewBox="0 0 740 80">
+  <!-- Workspace → demo_mongo -->
+  <line x1="185" y1="4" x2="115" y2="76" stroke="#818cf8" stroke-width="1.8" stroke-dasharray="5,3" opacity="0.7"/>
+  <!-- Workspace → demo_mongo -->
+  <line x1="185" y1="4" x2="370" y2="76" stroke="#f59e0b" stroke-width="1.8" stroke-dasharray="5,3" opacity="0.7"/>
+  <!-- CFO → demo_mongo -->
+  <line x1="555" y1="4" x2="370" y2="76" stroke="#f59e0b" stroke-width="1.8" stroke-dasharray="5,3" opacity="0.7"/>
+  <!-- CFO → cfo_database -->
+  <line x1="555" y1="4" x2="625" y2="76" stroke="#34d399" stroke-width="1.8" stroke-dasharray="5,3" opacity="0.7"/>
+
+  <text x="222" y="38" font-size="9" fill="#818cf8" opacity="0.8" text-anchor="middle" font-family="monospace">r/w</text>
+  <text x="260" y="50" font-size="9" fill="#f59e0b" opacity="0.8" text-anchor="middle" font-family="monospace">r/w</text>
+  <text x="490" y="50" font-size="9" fill="#f59e0b" opacity="0.8" text-anchor="middle" font-family="monospace">read</text>
+  <text x="596" y="38" font-size="9" fill="#34d399" opacity="0.8" text-anchor="middle" font-family="monospace">r/w</text>
+</svg>
+
+<!-- DB Cards -->
+<div class="dbs-row">
+
+  <div class="db-card workspace-private">
+    <div class="db-header">
+      <div class="db-icon">🔒</div>
+      <div class="db-name workspace-private">Workspace Private</div>
+      <div class="db-container-name">demo_mongo</div>
+    </div>
+
+    <div class="section-label">💬 Chat</div>
+    <ul class="model-list">
+      <li>Room</li>
+      <li>Message</li>
+      <li>Conversation</li>
+      <li>SavedMessage</li>
+      <li>UserChatSettings</li>
+    </ul>
+
+    <div class="section-label">📋 Workspace</div>
+    <ul class="model-list">
+      <li>Note</li>
+      <li>CalendarEvent</li>
+      <li>Notification</li>
+      <li>Comment</li>
+      <li>Resource</li>
+      <li>MediaFile</li>
+    </ul>
+
+    <div class="section-label">📱 Social / Push</div>
+    <ul class="model-list">
+      <li>SocialAccount</li>
+      <li>SocialPost</li>
+      <li>PushSubscription</li>
+    </ul>
+  </div>
+
+  <div class="db-card shared">
+    <div class="db-header">
+      <div class="db-icon">🔗</div>
+      <div class="db-name shared">Shared</div>
+      <div class="db-container-name">demo_mongo</div>
+    </div>
+
+    <div class="section-label">👥 People &amp; Org</div>
+    <ul class="model-list">
+      <li>User</li>
+      <li>Department</li>
+    </ul>
+
+    <div class="section-label">📁 Projects &amp; Work</div>
+    <ul class="model-list">
+      <li>Project</li>
+      <li>Task</li>
+    </ul>
+
+    <div class="section-label">🕐 HR</div>
+    <ul class="model-list">
+      <li>Attendance</li>
+    </ul>
+  </div>
+
+  <div class="db-card cfo-private">
+    <div class="db-header">
+      <div class="db-icon">💼</div>
+      <div class="db-name cfo-private">CFO Private</div>
+      <div class="db-container-name">cfo_database</div>
+    </div>
+
+    <div class="section-label">💰 Finance</div>
+    <ul class="model-list">
+      <li>Invoice</li>
+      <li>Service</li>
+      <li>ClientRecord</li>
+    </ul>
+
+    <div class="section-label">🏢 Clients</div>
+    <ul class="model-list">
+      <li>ClientMeta</li>
+    </ul>
+
+    <div class="section-label">👤 HR / Payroll</div>
+    <ul class="model-list">
+      <li>EmployeeMeta</li>
+      <li>SalaryRecord</li>
+      <li>LeaveRecord</li>
+    </ul>
+  </div>
+
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#818cf8"></div>
+    <span>Workspace private — r/w</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#f59e0b"></div>
+    <span>Shared — Workspace r/w · CFO read-only (bridge models)</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#34d399"></div>
+    <span>CFO private — r/w</span>
+  </div>
+</div>
+
+</body>
+</html>

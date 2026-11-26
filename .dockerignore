@@ -1,0 +1,12 @@
+# Build context for deploy/reset and deploy/nginx images is the repo root.
+**/node_modules
+**/.next
+**/out
+**/dist
+**/uploads
+**/*.log
+**/.env
+**/.env.*
+!**/.env.example
+.git
+docs

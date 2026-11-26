@@ -1,0 +1,25 @@
+.shell {
+  min-height: 100vh;
+}
+
+.main {
+  margin-left: var(--sidebar-width);
+  padding: 1.5rem;
+  padding-top: calc(1.5rem + var(--topbar-height));
+  min-height: calc(100vh - var(--topbar-height));
+  transition: margin-left 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mainCollapsed {
+  margin-left: var(--sidebar-collapsed-width);
+}
+
+@media (max-width: 768px) {
+  .main,
+  .mainCollapsed {
+    margin-left: 0;
+    padding: 1rem;
+    padding-top: calc(1rem + var(--topbar-height));
+    transition: none;
+  }
+}

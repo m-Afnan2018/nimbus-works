@@ -1,0 +1,155 @@
+.gridMb { margin-bottom: 18px; }
+
+.viewToggle {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.toggleBtn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.toggleBtn:hover { background: var(--bg2); color: var(--text); }
+.toggleActive {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--indigo);
+  background: var(--indigo-dim);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.monthNav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.navBtn   { padding: 6px 10px; font-size: 14px; }
+.navLabel {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  min-width: 110px;
+  text-align: center;
+}
+
+.valGreen { color: var(--emerald); }
+.valRed   { color: var(--red); }
+.valAmber { color: var(--amber); }
+.sub      { color: var(--text2) !important; }
+.dim      { color: var(--text3); font-size: 12px; }
+
+.badgeCredit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #d1fae5;
+  color: #065f46;
+  white-space: nowrap;
+}
+.badgeDebit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #fee2e2;
+  color: #991b1b;
+  white-space: nowrap;
+}
+
+.amtCredit { color: var(--emerald); font-weight: 600; font-variant-numeric: tabular-nums; }
+.amtDebit  { color: var(--red);     font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.dateCell  { font-size: 12px; color: var(--text2); white-space: nowrap; }
+.labelCell { font-weight: 600; }
+.refCell   { font-size: 12px; color: var(--text2); font-family: monospace; }
+.monthCell { font-weight: 600; }
+
+.footerRow td {
+  background: var(--surface);
+  border-top: 2px solid var(--border2) !important;
+  padding: 12px 16px;
+  font-size: 13px;
+}
+
+.yearRow { cursor: pointer; }
+.yearRow:hover td { background: var(--surface); }
+
+.miniBarWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 120px;
+}
+.miniBarCredit {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--emerald);
+  min-width: 2px;
+}
+.miniBarDebit {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--red);
+  min-width: 2px;
+}
+
+.empty {
+  font-size: 13px;
+  color: var(--text3);
+  padding: 24px 0;
+  text-align: center;
+}
+
+.placeholder {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text3);
+  font-size: 12px;
+}
+
+.sectionDivider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.sectionDivider::before,
+.sectionDivider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}

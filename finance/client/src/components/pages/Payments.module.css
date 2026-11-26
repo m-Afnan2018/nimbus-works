@@ -1,0 +1,99 @@
+.gridMb { margin-bottom: 18px; }
+
+.viewToggle {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.toggleBtn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.toggleBtn:hover { background: var(--bg2); color: var(--text); }
+.toggleActive {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--indigo);
+  background: var(--indigo-dim);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.monthNav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.navBtn  { padding: 6px 10px; font-size: 14px; }
+.navLabel {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  min-width: 110px;
+  text-align: center;
+}
+
+.valGreen { color: var(--emerald); }
+.valAmber { color: var(--amber); }
+.valRed   { color: var(--red); }
+.sub      { color: var(--text2) !important; }
+.dim      { color: var(--text3); font-size: 12px; }
+
+.dateCell   { font-size: 12px; color: var(--text2); white-space: nowrap; }
+.invNum     { font-family: monospace; font-size: 12px; color: var(--indigo); }
+.clientCell { font-weight: 600; }
+.paidDate   { font-size: 12px; color: var(--text2); }
+.monthCell  { font-weight: 600; }
+
+.footerRow td {
+  background: var(--surface);
+  border-top: 2px solid var(--border2) !important;
+  padding: 12px 16px;
+  font-size: 13px;
+}
+
+.yearRow { cursor: pointer; }
+.yearRow:hover td { background: var(--surface); }
+
+.pctWrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 100px;
+}
+.pctBar {
+  height: 6px;
+  border-radius: 3px;
+  flex: 1;
+  max-width: 80px;
+  min-width: 2px;
+  transition: width 0.3s;
+}
+.pctLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text2);
+  min-width: 30px;
+}
+
+.empty {
+  font-size: 13px;
+  color: var(--text3);
+  padding: 24px 0;
+  text-align: center;
+}

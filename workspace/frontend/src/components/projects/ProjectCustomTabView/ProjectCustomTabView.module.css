@@ -1,0 +1,404 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.headerTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  cursor: default;
+}
+
+.headerTitle:has(.headerEditIcon) { cursor: pointer; }
+
+.headerEditIcon {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.headerInput {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.headerInput:focus { outline: none; }
+
+.deleteTabBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.375rem 0.75rem;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.deleteTabBtn:hover { border-color: var(--danger); color: var(--danger); background: var(--danger-light); }
+
+.body {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+/* ── Sidebar ────────────────────────────────────────────────────── */
+.sidebar {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  position: sticky;
+  top: 1rem;
+}
+
+.sidebarLoading {
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.sidebarEmpty {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  padding: 1rem 0.5rem;
+}
+
+/* ── Sub-table list ─────────────────────────────────────────────── */
+.tableListWrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: auto;
+  max-height: 50vh;
+}
+
+.instanceTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.instanceTable thead th {
+  text-align: left;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 0.5rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+}
+
+.instanceRow {
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.instanceRow:hover { background: var(--surface); }
+.instanceRowActive { background: var(--primary-light); }
+
+.instanceRow td {
+  padding: 0.4375rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.75rem;
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.instanceRow:last-child td { border-bottom: none; }
+
+.nameCell {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 150px;
+}
+
+.nameDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.periodEditRow {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.periodSelect {
+  min-width: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.25rem 0.25rem;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.periodSelect:focus { outline: none; }
+
+.metaCell {
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60px;
+}
+
+.actionsCell {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.125rem;
+  opacity: 0;
+  transition: opacity var(--transition);
+  white-space: nowrap;
+}
+
+.instanceRow:hover .actionsCell { opacity: 1; }
+
+.actionsCell button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+}
+
+.actionsCell button:hover { background: var(--card); color: var(--primary); }
+.actionsCell button:last-child:hover { color: var(--danger); }
+
+/* ── Add table ──────────────────────────────────────────────────── */
+.defaultTemplateRow {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.defaultTemplateBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.25rem 0.375rem;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.defaultTemplateBtn:hover { background: var(--surface); color: var(--primary); }
+
+.defaultTemplateSelect {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.75rem;
+  padding: 0.3125rem 0.375rem;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.defaultTemplateSelect:focus { outline: none; }
+
+.defaultTemplateClear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+}
+
+.defaultTemplateClear:hover { background: var(--danger-light); color: var(--danger); }
+
+.addWrap {
+  position: relative;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.addBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  width: 100%;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.addBtn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+
+.addPopover {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0,0,0,0.16));
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.addEmptyHint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.addLabel {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.addPeriodRow {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.addPeriodRow .addSelect { flex: 1; min-width: 0; }
+
+.addSelect,
+.addInput {
+  width: 100%;
+  font-size: 0.8125rem;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.addSelect:focus,
+.addInput:focus { outline: none; border-color: var(--primary); }
+
+.addActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.addCancel {
+  padding: 0.375rem 0.625rem;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.addCancel:hover { color: var(--text-primary); }
+
+.addSubmit {
+  padding: 0.375rem 0.75rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.addSubmit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Main ───────────────────────────────────────────────────────── */
+.main {
+  min-width: 0;
+}
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 4rem 1rem;
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+}
+
+.mainLoading {
+  display: flex;
+  justify-content: center;
+  padding: 3rem;
+}
+
+@media (max-width: 780px) {
+  .body { grid-template-columns: 1fr; }
+  .sidebar { position: static; }
+  .tableListWrap { max-height: none; }
+}

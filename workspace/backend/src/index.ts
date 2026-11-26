@@ -1,0 +1,38 @@
+// Must be set before any other imports so new Date() and cron fire in IST
+process.env.TZ = 'Asia/Kolkata';
+
+import dotenv from 'dotenv';
+import path from 'path';
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config();
+
+import { createServer } from 'http';
+import app from './app';
+import connectDB from './config/db';
+import { initSocket } from './socket/chatSocket';
+import { startAutoCheckoutJob } from './jobs/autoCheckout';
+import { startAutoAbsentJob } from './jobs/autoAbsent';
+import { startSocialSchedulerJob } from './jobs/socialScheduler';
+import { startLunchOvertimeJob } from './jobs/lunchOvertime';
+import { isDemoMode } from './middleware/demo.middleware';
+
+const PORT = process.env.PORT || 5000;
+
+const start = async () => {
+  await connectDB();
+
+  const httpServer = createServer(app);
+  initSocket(httpServer);
+
+  httpServer.listen(PORT, () => {
+    console.log(`Nimbus Works Backend running on port ${PORT}${isDemoMode() ? ' (DEMO MODE)' : ''}`);
+  });
+
+  startAutoCheckoutJob();
+  startAutoAbsentJob();
+  // Social posting reaches real third-party APIs — never run it in the demo
+  if (!isDemoMode()) startSocialSchedulerJob();
+  startLunchOvertimeJob();
+};
+
+start().catch(console.error);

@@ -1,0 +1,413 @@
+/* ─── Page Layout ─────────────────────────────────────────────── */
+.page {
+  padding: 1.5rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* ─── Header ──────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.75rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.headerIcon {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.subtitle {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin: 0.125rem 0 0;
+}
+
+/* ─── Mic error banner ────────────────────────────────────────── */
+.micError {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  color: #b91c1c;
+  font-size: 0.875rem;
+  margin-bottom: 1.25rem;
+  cursor: pointer;
+}
+
+.micErrorDismiss {
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+/* ─── Loading & Empty ─────────────────────────────────────────── */
+.loadingState {
+  display: flex;
+  justify-content: center;
+  padding: 4rem 0;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 4rem 1rem;
+  text-align: center;
+}
+
+.emptyIcon {
+  color: var(--text-muted);
+  opacity: 0.4;
+  margin-bottom: 0.5rem;
+}
+
+.emptyTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.emptyDesc {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  max-width: 340px;
+  margin: 0;
+}
+
+/* ─── Room Grid ───────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+/* ─── Room Card ───────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 1.125rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.cardActive {
+  border-color: var(--primary) !important;
+  background: var(--primary-light);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+/* ─── Card header ─────────────────────────────────────────────── */
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cardTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.roomIcon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.roomIconActive {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.liveRing {
+  position: absolute;
+  inset: -4px;
+  border-radius: 12px;
+  border: 2px solid var(--primary);
+  animation: pulseRing 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes pulseRing {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+
+.cardName {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.speakingPill {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.45rem;
+  background: #d1fae5;
+  color: #065f46;
+  border-radius: 999px;
+  white-space: nowrap;
+  animation: speakPulse 1s ease-in-out infinite;
+}
+
+@keyframes speakPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.participantCount {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.deleteBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  opacity: 0;
+}
+
+.card:hover .deleteBtn { opacity: 1; }
+
+.deleteBtn:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* ─── Participants List ────────────────────────────────────────── */
+.participantsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-height: 56px;
+}
+
+.emptyRoom {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 0.5rem 0;
+}
+
+.participant {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 8px;
+  transition: background 0.12s;
+}
+
+.participant:hover { background: var(--bg); }
+
+.participantSelf {
+  background: color-mix(in srgb, var(--primary) 7%, transparent);
+}
+
+.participantAvatar {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.participantImg {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.onlineDot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  border: 2px solid var(--surface);
+}
+
+.participantName {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.micOnIcon { color: #22c55e; flex-shrink: 0; }
+.mutedIcon { color: #ef4444; flex-shrink: 0; }
+
+.participantAvatarSpeaking {
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #22c55e, 0 0 0 4px rgba(34, 197, 94, 0.25);
+  animation: speakRing 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes speakRing {
+  from { box-shadow: 0 0 0 2px #22c55e, 0 0 0 4px rgba(34, 197, 94, 0.2); }
+  to   { box-shadow: 0 0 0 2px #22c55e, 0 0 0 6px rgba(34, 197, 94, 0.4); }
+}
+
+.speakingWave {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #16a34a;
+  background: #dcfce7;
+  border-radius: 999px;
+  padding: 0.1rem 0.4rem;
+  animation: speakPulse 1s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+/* ─── Card footer ─────────────────────────────────────────────── */
+.cardFooter {
+  margin-top: auto;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.joinBtn, .leaveBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, filter 0.15s, opacity 0.15s;
+  border: none;
+}
+
+.joinBtn {
+  background: var(--primary);
+  color: white;
+}
+
+.joinBtn:hover:not(:disabled) { filter: brightness(1.09); }
+
+.joinBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.leaveBtn {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.leaveBtn:hover { background: #fecaca; }
+
+/* ─── Create Room Form ────────────────────────────────────────── */
+.createForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.createLabel {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.createInput {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9375rem;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.createInput:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.createActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}

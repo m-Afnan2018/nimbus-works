@@ -1,0 +1,1393 @@
+'use client';
+
+import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import AppShell from '@/components/layout/AppShell/AppShell';
+import Button from '@/components/ui/Button/Button';
+import Badge from '@/components/ui/Badge/Badge';
+import Modal from '@/components/ui/Modal/Modal';
+import Avatar from '@/components/ui/Avatar/Avatar';
+import Spinner from '@/components/ui/Spinner/Spinner';
+import TaskTimer from '@/components/tasks/TaskTimer';
+import TaskModal from '@/components/projects/TaskModal/TaskModal';
+import SuccessPopup from '@/components/ui/SuccessPopup/SuccessPopup';
+import SOPProgressTab from '@/components/projects/SOPProgressTab/SOPProgressTab';
+import StartSOPModal from '@/components/projects/StartSOPModal/StartSOPModal';
+import { useTasks } from '@/hooks/useTasks';
+import { useProjects } from '@/hooks/useProjects';
+import { useTeam } from '@/hooks/useTeam';
+import { useDepartments } from '@/hooks/useDepartments';
+import { useAuthStore } from '@/store/authStore';
+import { formatDate } from '@/lib/utils';
+import api, { uploadFile } from '@/lib/api';
+import type { Task, Attachment } from '@/types';
+import styles from './tasks.module.css';
+import { Calendar, ChevronLeft, ChevronRight, ArrowUpDown, CheckSquare, Check, CornerUpRight, Trash2, X } from 'lucide-react';
+
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
+type CreateTab = 'details' | 'checklist' | 'notes' | 'links' | 'files';
+type TaskSortKey = 'created_desc' | 'created_asc' | 'due_asc' | 'due_desc' | 'priority_desc' | 'priority_asc' | 'title_asc' | 'title_desc';
+const TASK_SORT_KEY = 'workspace_tasks_sort';
+const PRIORITY_ORDER: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+
+const priorityVariant = {
+  critical: 'danger' as const,
+  high: 'warning' as const,
+  medium: 'primary' as const,
+  low: 'success' as const,
+};
+
+const statusAccent: Record<string, string> = {
+  backlog: styles.accentBacklog,
+  todo: styles.accentTodo,
+  in_progress: styles.accentInProgress,
+  in_review: styles.accentInReview,
+  done: styles.accentDone,
+};
+
+export default function TasksPage() {
+  return (
+    <Suspense>
+      <TasksPageInner />
+    </Suspense>
+  );
+}
+
+function TasksPageInner() {
+  const router = useRouter();
+  const { tasks, loading, error, fetchTasks, fetchPersonalTasks, createTask, updateTaskStatus, deleteTask, patchTimer, delegateTask } = useTasks();
+  const { projects } = useProjects();
+  const { members } = useTeam();
+  const { departments } = useDepartments();
+  const user = useAuthStore((s) => s.user);
+  const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager';
+
+  // Departments this user heads (if any)
+  const myHeadedDepts = useMemo(
+    () => departments.filter((d) =>
+      d.heads?.some((h) => (h.id ?? (h as any)._id) === user?.id)
+    ),
+    [departments, user?.id],
+  );
+  const isDeptHead = !isAdminOrManager && myHeadedDepts.length > 0;
+
+  // Deduplicated members from all headed departments
+  const deptMembers = useMemo(() => {
+    const seen = new Set<string>();
+    const result: typeof members = [];
+    myHeadedDepts.forEach((d) =>
+      d.members.forEach((m) => {
+        const id = m.id ?? (m as any)._id;
+        if (id && !seen.has(id)) { seen.add(id); result.push(m as any); }
+      }),
+    );
+    return result;
+  }, [myHeadedDepts]);
+
+  // Members the current user (as dept head) can delegate to
+  const delegatableMembers = useMemo(() => {
+    const seen = new Set<string>();
+    const result: { id: string; name: string }[] = [];
+    for (const d of myHeadedDepts) {
+      for (const m of [...d.members, ...d.heads]) {
+        const id = (m.id ?? (m as any)._id)?.toString();
+        if (id && id !== user?.id && !seen.has(id)) {
+          seen.add(id);
+          result.push({ id, name: m.name });
+        }
+      }
+    }
+    return result;
+  }, [myHeadedDepts, user?.id]);
+
+  // Departments to offer templates from: admins/managers see every department,
+  // everyone else only sees departments they actually belong to.
+  const myTemplateDepts = useMemo(() => {
+    if (isAdminOrManager) return departments;
+    return departments.filter((d) =>
+      [...(d.heads ?? []), ...(d.members ?? []), ...(d.collaborators ?? [])].some(
+        (p) => ((p as any).id ?? (p as any)._id) === user?.id
+      )
+    );
+  }, [departments, isAdminOrManager, user?.id]);
+
+  const handleDelegateSubmit = async () => {
+    if (!delegateModal?.delegateTo) return;
+    setDelegating(true);
+    const result = await delegateTask(delegateModal.task._id, delegateModal.delegateTo, delegateModal.note);
+    if (result) {
+      setLocalTasks((prev) => prev.map((t) => (t._id === result._id ? result : t)));
+      setDelegateModal(null);
+    } else {
+      setDelegateModal((m) => m ? { ...m, error: 'Could not delegate. Check you have permission.' } : null);
+    }
+    setDelegating(false);
+  };
+
+  const [tab, setTab] = useState<'personal' | 'assigned' | 'sops'>('assigned');
+  const [showCreate, setShowCreate] = useState(false);
+  const [showStartSOP, setShowStartSOP] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [localTasks, setLocalTasks] = useState<Task[]>([]);
+  const [completedOpen, setCompletedOpen] = useState(false);
+  const [completedPage, setCompletedPage] = useState(1);
+  const [completedSort, setCompletedSort] = useState<'desc' | 'asc'>('desc');
+  const COMPLETED_PAGE_SIZE = 10;
+  const [deleteConfirm, setDeleteConfirm] = useState<Task | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkWorking, setBulkWorking] = useState(false);
+
+  useEffect(() => { setSelectedIds(new Set()); }, [tab]);
+  const [delegateModal, setDelegateModal] = useState<{ task: Task; delegateTo: string; note: string; error: string } | null>(null);
+  const [delegating, setDelegating] = useState(false);
+  const [successPopup, setSuccessPopup] = useState<{ visible: boolean; title: string; subtitle: string }>({ visible: false, title: '', subtitle: '' });
+
+  const showSuccess = (title: string, subtitle: string) => setSuccessPopup({ visible: true, title, subtitle });
+  const hideSuccess = () => setSuccessPopup((s) => ({ ...s, visible: false }));
+
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterPriority, setFilterPriority] = useState('');
+  const [filterAssignee, setFilterAssignee] = useState('');
+  const [filterProject, setFilterProject] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
+  const [activeSort, setActiveSort] = useState<TaskSortKey>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem(TASK_SORT_KEY) as TaskSortKey) || 'created_desc';
+    }
+    return 'created_desc';
+  });
+
+  useEffect(() => { localStorage.setItem(TASK_SORT_KEY, activeSort); }, [activeSort]);
+
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    remark: '',
+    priority: 'medium',
+    status: 'todo',
+    dueDate: '',
+    estimatedHours: '',
+    project: '',
+    isPersonal: false,
+    assignees: [] as string[],
+  });
+  const [createTab, setCreateTab] = useState<CreateTab>('details');
+  const [notes, setNotes] = useState('');
+  const [links, setLinks] = useState<string[]>([]);
+  const [linkInput, setLinkInput] = useState('');
+  const [checklist, setChecklist] = useState<string[]>([]);
+  const [checklistInput, setChecklistInput] = useState('');
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [fileUploading, setFileUploading] = useState(false);
+  const [fileUploadError, setFileUploadError] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (tab === 'personal') fetchPersonalTasks();
+    else fetchTasks();
+  }, [tab, fetchTasks, fetchPersonalTasks]);
+
+  useEffect(() => { setLocalTasks(tasks); }, [tasks]);
+
+  const resetCreateForm = () => {
+    setForm({ title: '', description: '', remark: '', priority: 'medium', status: 'todo', dueDate: '', estimatedHours: '', project: '', isPersonal: tab === 'personal', assignees: [] });
+    setNotes('');
+    setLinks([]);
+    setLinkInput('');
+    setChecklist([]);
+    setChecklistInput('');
+    setAttachments([]);
+    setFileUploadError('');
+    setCreateTab('details');
+  };
+
+  const openCreate = () => {
+    setForm((f) => ({ ...f, isPersonal: tab === 'personal', project: '', assignees: [] }));
+    setCreateTab('details');
+    setShowCreate(true);
+  };
+
+  const handleCreate = async () => {
+    if (!form.title.trim()) return;
+    setSaving(true);
+    const payload: Record<string, unknown> = {
+      title: form.title.trim(),
+      description: form.description.trim() || undefined,
+      remark: form.remark.trim() || undefined,
+      priority: form.priority,
+      status: form.status,
+      isPersonal: form.isPersonal,
+      notes: notes.trim() || undefined,
+      links: links.length ? links : undefined,
+      attachments: attachments.length ? attachments : undefined,
+      checklist: checklist.length ? checklist : undefined,
+    };
+    if (form.dueDate) payload.dueDate = form.dueDate;
+    if (form.estimatedHours) payload.estimatedHours = parseFloat(form.estimatedHours);
+    if (form.project) payload.project = form.project;
+    if (form.assignees.length) payload.assignees = form.assignees;
+    await createTask(payload as Partial<Task>);
+    setSaving(false);
+    setShowCreate(false);
+    resetCreateForm();
+    showSuccess('Task Created!', 'Your new task has been added.');
+  };
+
+  const addLink = () => {
+    const url = linkInput.trim();
+    if (!url || links.includes(url)) return;
+    setLinks((prev) => [...prev, url]);
+    setLinkInput('');
+  };
+
+  const addChecklistItem = () => {
+    const v = checklistInput.trim();
+    if (!v) return;
+    setChecklist((prev) => [...prev, v]);
+    setChecklistInput('');
+  };
+
+  const uploadFiles = async (files: FileList | File[]) => {
+    setFileUploadError('');
+    setFileUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const data = await uploadFile(file);
+        setAttachments((prev) => [...prev, {
+          name: data.name, url: data.url, type: data.type, uploadedAt: new Date().toISOString(),
+        }]);
+      }
+    } catch {
+      setFileUploadError('Upload failed. Check file type/size (max 1 GB).');
+    } finally {
+      setFileUploading(false);
+    }
+  };
+
+  const handleStatusChange = async (task: Task, status: string) => {
+    const updated = await updateTaskStatus(task._id, status);
+    if (updated) setLocalTasks((prev) => prev.map((t) => (t._id === updated._id ? updated : t)));
+  };
+
+  const handleTimerUpdate = (updated: Task) => {
+    setLocalTasks((prev) => prev.map((t) => (t._id === updated._id ? updated : t)));
+  };
+
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const openId = searchParams.get('open');
+    if (!openId) return;
+    api.get(`/tasks/${openId}`).then(({ data }) => {
+      setSelectedTask(data);
+      setShowTaskModal(true);
+    }).catch(() => {});
+  }, [searchParams]);
+
+  const handleTaskClick = async (task: Task) => {
+    try {
+      const { data } = await api.get(`/tasks/${task._id}`);
+      setSelectedTask(data);
+    } catch {
+      setSelectedTask(task);
+    }
+    setShowTaskModal(true);
+  };
+
+  const handleTaskUpdate = (updated: Task) => {
+    setSelectedTask(updated);
+    setLocalTasks((prev) => prev.map((t) => (t._id === updated._id ? updated : t)));
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+    setDeleting(true);
+    await deleteTask(deleteConfirm._id);
+    setLocalTasks((prev) => prev.filter((t) => t._id !== deleteConfirm._id));
+    setDeleting(false);
+    setDeleteConfirm(null);
+  };
+
+  // Shared predicate for everything except status (used by both sections)
+  const matchesNonStatusFilters = (t: (typeof localTasks)[0]) => {
+    if (filterPriority && t.priority !== filterPriority) return false;
+    if (filterAssignee && !t.assignees.filter(Boolean).some((a) => ((a as any)._id?.toString() || a.id) === filterAssignee)) return false;
+    if (filterProject) {
+      const projId = typeof t.project === 'object' ? t.project?._id : t.project;
+      if (projId !== filterProject) return false;
+    }
+    if (filterDateFrom && new Date(t.createdAt) < new Date(filterDateFrom)) return false;
+    if (filterDateTo && new Date(t.createdAt) > new Date(filterDateTo + 'T23:59:59')) return false;
+    return true;
+  };
+
+  // Active tasks respect the status filter pill
+  const activeTasks = useMemo(() => {
+    const list = localTasks.filter((t) => {
+      if (t.status === 'done') return false;
+      if (filterStatus && t.status !== filterStatus) return false;
+      return matchesNonStatusFilters(t);
+    });
+    list.sort((a, b) => {
+      switch (activeSort) {
+        case 'created_asc':  return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'created_desc': return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'due_asc': {
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        }
+        case 'due_desc': {
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+        }
+        case 'priority_desc': return (PRIORITY_ORDER[b.priority] ?? 0) - (PRIORITY_ORDER[a.priority] ?? 0);
+        case 'priority_asc':  return (PRIORITY_ORDER[a.priority] ?? 0) - (PRIORITY_ORDER[b.priority] ?? 0);
+        case 'title_asc':  return a.title.localeCompare(b.title);
+        case 'title_desc': return b.title.localeCompare(a.title);
+        default: return 0;
+      }
+    });
+    return list;
+  }, [localTasks, filterStatus, filterPriority, filterAssignee, filterProject, filterDateFrom, filterDateTo, activeSort]);
+
+  // Completed tasks — filtered, sorted by createdAt, then paginated
+  const completedTasks = useMemo(() => {
+    const filtered = localTasks.filter((t) => t.status === 'done' && matchesNonStatusFilters(t));
+    filtered.sort((a, b) => {
+      const diff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      return completedSort === 'desc' ? diff : -diff;
+    });
+    return filtered;
+  }, [localTasks, filterPriority, filterAssignee, filterProject, filterDateFrom, filterDateTo, completedSort]);
+
+  const completedTotalPages = Math.ceil(completedTasks.length / COMPLETED_PAGE_SIZE);
+  const completedPagedTasks = completedTasks.slice(
+    (completedPage - 1) * COMPLETED_PAGE_SIZE,
+    completedPage * COMPLETED_PAGE_SIZE,
+  );
+
+  const hasFilters = filterStatus || filterPriority || filterAssignee || filterProject || filterDateFrom || filterDateTo;
+
+  const clearFilters = () => {
+    setFilterStatus('');
+    setFilterPriority('');
+    setFilterAssignee('');
+    setFilterProject('');
+    setFilterDateFrom('');
+    setFilterDateTo('');
+    setCompletedPage(1);
+  };
+
+  // Reset page when filters or sort changes
+  useEffect(() => { setCompletedPage(1); }, [
+    filterPriority, filterAssignee, filterProject, filterDateFrom, filterDateTo, completedSort,
+  ]);
+
+  const allVisibleIds = useMemo(() => [
+    ...activeTasks.map((t) => t._id),
+    ...(completedOpen ? completedPagedTasks.map((t) => t._id) : []),
+  ], [activeTasks, completedPagedTasks, completedOpen]);
+
+  const isAllSelected = allVisibleIds.length > 0 && allVisibleIds.every((id) => selectedIds.has(id));
+
+  const toggleSelect = (id: string) => setSelectedIds((prev) => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  const selectAll = () => setSelectedIds(new Set(allVisibleIds));
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleBulkStatusChange = async (status: string) => {
+    if (!status) return;
+    setBulkWorking(true);
+    const ids = Array.from(selectedIds);
+    const results = await Promise.all(ids.map((id) => updateTaskStatus(id, status)));
+    const updated = results.filter(Boolean) as Task[];
+    if (updated.length) {
+      setLocalTasks((prev) => prev.map((t) => updated.find((u) => u._id === t._id) ?? t));
+    }
+    clearSelection();
+    setBulkWorking(false);
+    showSuccess('Tasks Updated', `${ids.length} task${ids.length > 1 ? 's' : ''} moved to ${status.replace(/_/g, ' ')}.`);
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkWorking(true);
+    const ids = Array.from(selectedIds);
+    await Promise.all(ids.map((id) => deleteTask(id)));
+    setLocalTasks((prev) => prev.filter((t) => !selectedIds.has(t._id)));
+    clearSelection();
+    setBulkDeleteConfirm(false);
+    setBulkWorking(false);
+    showSuccess('Tasks Deleted', `${ids.length} task${ids.length > 1 ? 's' : ''} removed.`);
+  };
+
+  const emptyMessage = hasFilters
+    ? { icon: '🔍', title: 'No matches', text: 'No tasks match the current filters.' }
+    : tab === 'personal'
+    ? { icon: '📋', title: 'No personal tasks', text: 'Create one to track work only you can see.' }
+    : tab === 'assigned' && !isAdminOrManager
+    ? { icon: '📭', title: 'Nothing assigned', text: "You don't have any tasks assigned yet." }
+    : { icon: '📋', title: 'No tasks yet', text: 'Create your first task to get started.' };
+
+  return (
+    <AppShell title="Tasks">
+      <div className={styles.page}>
+
+        {/* Header */}
+        <div className={styles.header}>
+          <div className={styles.tabs}>
+            <button className={`${styles.tab} ${tab === 'assigned' ? styles.active : ''}`} onClick={() => setTab('assigned')}>
+              {isAdminOrManager ? 'All Tasks' : 'My Tasks'}
+            </button>
+            <button className={`${styles.tab} ${tab === 'personal' ? styles.active : ''}`} onClick={() => setTab('personal')}>
+              Personal
+            </button>
+            <button className={`${styles.tab} ${tab === 'sops' ? styles.active : ''}`} onClick={() => setTab('sops')}>
+              SOPs
+            </button>
+          </div>
+          <div className={styles.headerActions}>
+            {isAdminOrManager && (
+              <Button variant="secondary" onClick={() => setShowStartSOP(true)}>Start SOP</Button>
+            )}
+            <Button onClick={openCreate}>+ New Task</Button>
+          </div>
+        </div>
+
+        {tab === 'sops' ? (
+          <SOPProgressTab
+            tasks={localTasks}
+            showProject
+            onTaskClick={handleTaskClick}
+            onRunDeleted={(ids) => setLocalTasks((prev) => prev.filter((t) => !ids.includes(t._id)))}
+          />
+        ) : (
+        <>
+        {/* Filters */}
+        <div className={styles.filters}>
+          {/* Status dropdown */}
+          <select className={styles.filterSelect} value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+            <option value="">All Status</option>
+            <option value="backlog">Backlog</option>
+            <option value="todo">Todo</option>
+            <option value="in_progress">In Progress</option>
+            <option value="in_review">In Review</option>
+            <option value="done">Done</option>
+          </select>
+
+          {/* Priority dropdown */}
+          <select className={styles.filterSelect} value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}>
+            <option value="">All Priority</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="critical">Critical</option>
+          </select>
+
+          {/* Project + Assignee selects */}
+          {projects.length > 0 && (
+            <select className={styles.filterSelect} value={filterProject} onChange={(e) => setFilterProject(e.target.value)}>
+              <option value="">All Projects</option>
+              {projects.map((p) => (
+                <option key={p._id} value={p._id}>{p.title}</option>
+              ))}
+            </select>
+          )}
+          {tab === 'assigned' && members.length > 0 && (
+            <select className={styles.filterSelect} value={filterAssignee} onChange={(e) => setFilterAssignee(e.target.value)}>
+              <option value="">All Assignees</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          )}
+
+          {/* Date range */}
+          <div className={styles.dateRange}>
+            <span className={styles.dateRangeIcon}>
+              <Calendar size={12} strokeWidth={2.5} />
+            </span>
+            <input
+              type="date"
+              className={styles.dateInput}
+              value={filterDateFrom}
+              onChange={(e) => setFilterDateFrom(e.target.value)}
+              title="Created from"
+            />
+            <span className={styles.dateRangeSep}>–</span>
+            <input
+              type="date"
+              className={styles.dateInput}
+              value={filterDateTo}
+              onChange={(e) => setFilterDateTo(e.target.value)}
+              title="Created to"
+            />
+          </div>
+
+          <span className={styles.filterDivider} />
+
+          {/* Sort by */}
+          <div className={styles.sortSelect}>
+            <ArrowUpDown size={11} strokeWidth={2.5} />
+            <select
+              value={activeSort}
+              onChange={(e) => setActiveSort(e.target.value as TaskSortKey)}
+              className={styles.sortSelectInner}
+            >
+              <option value="created_desc">Newest first</option>
+              <option value="created_asc">Oldest first</option>
+              <option value="due_asc">Due: soonest</option>
+              <option value="due_desc">Due: latest</option>
+              <option value="priority_desc">Priority: high → low</option>
+              <option value="priority_asc">Priority: low → high</option>
+              <option value="title_asc">Title A → Z</option>
+              <option value="title_desc">Title Z → A</option>
+            </select>
+          </div>
+
+          {hasFilters && (
+            <button className={styles.clearFilters} onClick={clearFilters}>✕ Clear</button>
+          )}
+        </div>
+
+        {/* Body */}
+        {loading ? (
+          <div className={styles.loading}><Spinner size="lg" /></div>
+        ) : error ? (
+          <div className={styles.empty}>
+            <span className={styles.emptyIcon}>⚠️</span>
+            <p className={styles.emptyTitle}>Something went wrong</p>
+            <p className={styles.emptyText}>{error}</p>
+          </div>
+        ) : activeTasks.length === 0 && completedTasks.length === 0 ? (
+          <div className={styles.empty}>
+            <span className={styles.emptyIcon}>{emptyMessage.icon}</span>
+            <p className={styles.emptyTitle}>{emptyMessage.title}</p>
+            <p className={styles.emptyText}>{emptyMessage.text}</p>
+          </div>
+        ) : (
+          <>
+            {activeTasks.length > 0 && (
+              <div className={styles.taskList}>
+                {activeTasks.map((task) => (
+                  <TaskRow
+                    key={task._id}
+                    task={task}
+                    currentUserId={user?.id ?? ''}
+                    isAdminOrManager={isAdminOrManager}
+                    onStatusChange={handleStatusChange}
+                    onTimerUpdate={handleTimerUpdate}
+                    onDelete={(t) => setDeleteConfirm(t)}
+                    onClick={handleTaskClick}
+                    patchTimer={patchTimer}
+                    delegatableMembers={delegatableMembers}
+                    onDelegateClick={(t) => setDelegateModal({ task: t, delegateTo: '', note: '', error: '' })}
+                    selected={selectedIds.has(task._id)}
+                    onToggleSelect={toggleSelect}
+                  />
+                ))}
+              </div>
+            )}
+
+            {completedTasks.length > 0 && (
+              <div className={styles.completedSection}>
+                <div className={styles.completedHeader}>
+                  <button className={styles.completedToggle} onClick={() => setCompletedOpen((v) => !v)}>
+                    <span className={styles.completedChevron}>{completedOpen ? '▾' : '▸'}</span>
+                    Completed
+                    <span className={styles.completedCount}>{completedTasks.length}</span>
+                  </button>
+                  {completedOpen && (
+                    <button
+                      className={styles.sortBtn}
+                      onClick={() => setCompletedSort((s) => s === 'desc' ? 'asc' : 'desc')}
+                      title="Sort by created date"
+                    >
+                      <ArrowUpDown size={12} strokeWidth={2.5} />
+                      {completedSort === 'desc' ? 'Newest first' : 'Oldest first'}
+                    </button>
+                  )}
+                </div>
+
+                {completedOpen && (
+                  <>
+                    <div className={styles.taskList}>
+                      {completedPagedTasks.map((task) => (
+                        <TaskRow
+                          key={task._id}
+                          task={task}
+                          currentUserId={user?.id ?? ''}
+                          isAdminOrManager={isAdminOrManager}
+                          onStatusChange={handleStatusChange}
+                          onTimerUpdate={handleTimerUpdate}
+                          onDelete={(t) => setDeleteConfirm(t)}
+                          onClick={handleTaskClick}
+                          patchTimer={patchTimer}
+                          delegatableMembers={delegatableMembers}
+                          onDelegateClick={(t) => setDelegateModal({ task: t, delegateTo: '', note: '', error: '' })}
+                          selected={selectedIds.has(task._id)}
+                          onToggleSelect={toggleSelect}
+                        />
+                      ))}
+                    </div>
+
+                    {completedTotalPages > 1 && (
+                      <div className={styles.pagination}>
+                        <button
+                          className={styles.pageBtn}
+                          onClick={() => setCompletedPage((p) => Math.max(1, p - 1))}
+                          disabled={completedPage === 1}
+                        >
+                          <ChevronLeft size={14} strokeWidth={2.5} />
+                        </button>
+                        <span className={styles.pageInfo}>
+                          {completedPage} / {completedTotalPages}
+                          <span className={styles.pageTotal}> &nbsp;({completedTasks.length} tasks)</span>
+                        </span>
+                        <button
+                          className={styles.pageBtn}
+                          onClick={() => setCompletedPage((p) => Math.min(completedTotalPages, p + 1))}
+                          disabled={completedPage === completedTotalPages}
+                        >
+                          <ChevronRight size={14} strokeWidth={2.5} />
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </>
+        )}
+        </>
+        )}
+      </div>
+
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className={styles.bulkBar}>
+          <div className={styles.bulkBarLeft}>
+            <button className={styles.bulkCheckAll} onClick={isAllSelected ? clearSelection : selectAll}>
+              <span className={`${styles.checkbox} ${isAllSelected ? styles.checkboxChecked : styles.checkboxPartial}`}>
+                {isAllSelected ? <Check size={10} strokeWidth={3} /> : <span className={styles.checkboxDash} />}
+              </span>
+            </button>
+            <span className={styles.bulkCount}>{selectedIds.size} selected</span>
+            <button className={styles.bulkClear} onClick={clearSelection} title="Clear selection">
+              <X size={13} strokeWidth={2.5} />
+            </button>
+          </div>
+          <div className={styles.bulkBarRight}>
+            <select
+              className={styles.bulkStatusSelect}
+              defaultValue=""
+              disabled={bulkWorking}
+              onChange={(e) => { handleBulkStatusChange(e.target.value); e.target.value = ''; }}
+            >
+              <option value="" disabled>Move to…</option>
+              <option value="backlog">Backlog</option>
+              <option value="todo">Todo</option>
+              <option value="in_progress">In Progress</option>
+              <option value="in_review">In Review</option>
+              <option value="done">Done</option>
+            </select>
+            <button
+              className={styles.bulkDeleteBtn}
+              onClick={() => setBulkDeleteConfirm(true)}
+              disabled={bulkWorking}
+            >
+              <Trash2 size={13} strokeWidth={2.5} />
+              Delete
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Start SOP modal */}
+      <StartSOPModal
+        isOpen={showStartSOP}
+        onClose={() => setShowStartSOP(false)}
+        projects={projects.map((p) => ({ _id: p._id, title: p.title }))}
+        onStarted={async () => {
+          setShowStartSOP(false);
+          await fetchTasks();
+          showSuccess('SOP Started!', 'Tasks have been generated for the selected project.');
+        }}
+      />
+
+      {/* Create modal */}
+      <Modal isOpen={showCreate} onClose={() => { setShowCreate(false); resetCreateForm(); }} title="New Task" size="lg">
+        <div className={styles.form}>
+
+          {/* ── Team / Personal switch ── */}
+          <div className={styles.taskTypeSwitch}>
+            <button
+              type="button"
+              className={`${styles.taskTypeSwitchBtn} ${!form.isPersonal ? styles.taskTypeSwitchBtnActive : ''}`}
+              onClick={() => setForm((f) => ({ ...f, isPersonal: false }))}
+            >
+              Team Task
+              <span className={styles.taskTypeSwitchSub}>Can be assigned to members</span>
+            </button>
+            <button
+              type="button"
+              className={`${styles.taskTypeSwitchBtn} ${form.isPersonal ? styles.taskTypeSwitchBtnActive : ''}`}
+              onClick={() => setForm((f) => ({ ...f, isPersonal: true, project: '', assignees: [] }))}
+            >
+              Personal Task
+              <span className={styles.taskTypeSwitchSub}>Only visible to you</span>
+            </button>
+          </div>
+
+          {/* ── Tab bar ── */}
+          <div className={styles.modalTabBar}>
+            {(['details', 'checklist', 'notes', 'links', 'files'] as CreateTab[]).map((t) => (
+              <button
+                key={t}
+                type="button"
+                className={`${styles.modalTabBtn} ${createTab === t ? styles.modalTabBtnActive : ''}`}
+                onClick={() => setCreateTab(t)}
+              >
+                {t === 'details' && 'Details'}
+                {t === 'checklist' && (<>Checklist{checklist.length > 0 && <span className={styles.modalTabCount}>{checklist.length}</span>}</>)}
+                {t === 'notes' && 'Notes'}
+                {t === 'links' && (<>Links{links.length > 0 && <span className={styles.modalTabCount}>{links.length}</span>}</>)}
+                {t === 'files' && (<>Files{attachments.length > 0 && <span className={styles.modalTabCount}>{attachments.length}</span>}</>)}
+              </button>
+            ))}
+          </div>
+
+          {/* ── Details tab ── */}
+          {createTab === 'details' && (
+            <div className={styles.modalTabContent}>
+
+              {/* Template picker */}
+              {myTemplateDepts.some((d) => (d.taskTemplates ?? []).length > 0) && (
+                <div className={styles.field}>
+                  <label>Use Template</label>
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      if (!e.target.value) return;
+                      const [deptId, templateId, typeId] = e.target.value.split('::');
+                      const dept = myTemplateDepts.find((d) => d._id === deptId);
+                      const tpl = dept?.taskTemplates?.find((t) => t._id === templateId);
+                      const ty  = typeId ? tpl?.types?.find((t) => t._id === typeId) : undefined;
+                      if (ty) {
+                        setForm((f) => ({
+                          ...f,
+                          title: ty.title,
+                          description: ty.description || tpl?.description || '',
+                          priority: ty.priority || tpl?.priority || f.priority,
+                          estimatedHours: ty.estimatedHours != null ? String(ty.estimatedHours) : f.estimatedHours,
+                        }));
+                        setChecklist(ty.checklist ?? tpl?.checklist ?? []);
+                      } else if (tpl) {
+                        setForm((f) => ({
+                          ...f,
+                          title: tpl.title,
+                          description: tpl.description || '',
+                          priority: tpl.priority || f.priority,
+                          estimatedHours: tpl.estimatedHours != null ? String(tpl.estimatedHours) : f.estimatedHours,
+                        }));
+                        setChecklist(tpl.checklist ?? []);
+                      }
+                      e.target.value = '';
+                    }}
+                  >
+                    <option value="">— Pick a template to pre-fill —</option>
+                    {myTemplateDepts.filter((d) => (d.taskTemplates ?? []).length > 0).map((d) => (
+                      <optgroup key={d._id} label={d.name}>
+                        {d.taskTemplates.flatMap((t) => [
+                          <option key={t._id} value={`${d._id}::${t._id}`}>
+                            {t.title}{t.estimatedHours != null ? ` (${t.estimatedHours}h)` : ''}
+                          </option>,
+                          ...(t.types ?? []).map((ty) => (
+                            <option key={ty._id} value={`${d._id}::${t._id}::${ty._id}`}>
+                              {`— ${t.title}: ${ty.title}`}{ty.estimatedHours != null ? ` (${ty.estimatedHours}h)` : ''}
+                            </option>
+                          )),
+                        ])}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {!form.isPersonal && (
+                <div className={styles.field}>
+                  <label>Project (optional)</label>
+                  <select value={form.project} onChange={(e) => setForm({ ...form, project: e.target.value })}>
+                    <option value="">No project</option>
+                    {[...projects].sort((a, b) => a.title.localeCompare(b.title)).map((p) => (
+                      <option key={p._id} value={p._id}>{p.title}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className={styles.field}>
+                <label>Title <span className={styles.req}>*</span></label>
+                <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="What needs to be done?" autoFocus />
+              </div>
+
+              <div className={styles.field}>
+                <label>Description</label>
+                <textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Add more details…" />
+              </div>
+
+              <div className={styles.field}>
+                <label>Remark</label>
+                <input value={form.remark} onChange={(e) => setForm({ ...form, remark: e.target.value })} placeholder="Short remark visible on the task card" />
+              </div>
+
+              <div className={styles.row}>
+                <div className={styles.field}>
+                  <label>Priority</label>
+                  <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
+                <div className={styles.field}>
+                  <label>Status</label>
+                  <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                    <option value="backlog">Backlog</option>
+                    <option value="todo">To Do</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="in_review">In Review</option>
+                    <option value="done">Done</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className={styles.row}>
+                <div className={styles.field}>
+                  <label>Due Date</label>
+                  <input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
+                </div>
+                <div className={styles.field}>
+                  <label>Est. Hours</label>
+                  <input type="number" min="0" step="0.5" value={form.estimatedHours} onChange={(e) => setForm({ ...form, estimatedHours: e.target.value })} placeholder="0" />
+                </div>
+              </div>
+
+              {!form.isPersonal && (
+                <div className={styles.field}>
+                  <label>Assignee</label>
+                  {isAdminOrManager ? (
+                    /* Admin / Manager — all team members */
+                    <div className={styles.assigneeGrid}>
+                      {members.map((m) => {
+                        const checked = form.assignees.includes(m.id);
+                        return (
+                          <button
+                            key={m.id}
+                            type="button"
+                            className={`${styles.assigneeChip} ${checked ? styles.assigneeChipActive : ''}`}
+                            onClick={() => setForm((f) => ({
+                              ...f,
+                              assignees: checked ? [] : [m.id],
+                            }))}
+                          >
+                            <span className={styles.assigneeInitial}>{m.name.charAt(0).toUpperCase()}</span>
+                            <span>{m.name}</span>
+                            {checked && (
+                              <Check size={11} strokeWidth={3} />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : isDeptHead ? (
+                    /* Department Head — only their department members */
+                    <>
+                      <p className={styles.deptAssigneeHint}>
+                        {myHeadedDepts.map((d) => d.name).join(', ')}
+                      </p>
+                      <div className={styles.assigneeGrid}>
+                        {deptMembers.map((m) => {
+                          const mid = m.id ?? (m as any)._id;
+                          const checked = form.assignees.includes(mid);
+                          return (
+                            <button
+                              key={mid}
+                              type="button"
+                              className={`${styles.assigneeChip} ${checked ? styles.assigneeChipActive : ''}`}
+                              onClick={() => setForm((f) => ({
+                                ...f,
+                                assignees: checked ? [] : [mid],
+                              }))}
+                            >
+                              <span className={styles.assigneeInitial}>{m.name.charAt(0).toUpperCase()}</span>
+                              <span>{m.name}</span>
+                              {checked && (
+                                <Check size={11} strokeWidth={3} />
+                              )}
+                            </button>
+                          );
+                        })}
+                        {deptMembers.length === 0 && (
+                          <span className={styles.noMembers}>No members in your department yet.</span>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    /* Regular member — assign to self only */
+                    <button
+                      type="button"
+                      className={`${styles.assigneeChip} ${form.assignees.includes(user?.id ?? '') ? styles.assigneeChipActive : ''}`}
+                      onClick={() => setForm((f) => {
+                        const id = user?.id ?? '';
+                        const already = f.assignees.includes(id);
+                        return { ...f, assignees: already ? [] : [id] };
+                      })}
+                    >
+                      <span className={styles.assigneeInitial}>{(user?.name ?? '?').charAt(0).toUpperCase()}</span>
+                      <span>Assign to me</span>
+                      {form.assignees.includes(user?.id ?? '') && (
+                        <Check size={11} strokeWidth={3} />
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Notes tab ── */}
+          {createTab === 'notes' && (
+            <div className={styles.modalTabContent}>
+              <div className={styles.field}>
+                <label>Notes</label>
+                <textarea
+                  className={styles.notesArea}
+                  rows={12}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Add internal notes, checklists, or any context for this task…"
+                  autoFocus
+                />
+              </div>
+            </div>
+          )}
+
+          {/* ── Checklist tab ── */}
+          {createTab === 'checklist' && (
+            <div className={styles.modalTabContent}>
+              <div className={styles.field}>
+                <label>Add Checklist Item</label>
+                <div className={styles.linkRow}>
+                  <input
+                    value={checklistInput}
+                    onChange={(e) => setChecklistInput(e.target.value)}
+                    placeholder="Checklist item"
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addChecklistItem(); } }}
+                    autoFocus
+                  />
+                  <Button size="sm" onClick={addChecklistItem} disabled={!checklistInput.trim()}>Add</Button>
+                </div>
+              </div>
+              {checklist.length > 0 ? (
+                <div className={styles.linkItemList}>
+                  {checklist.map((item, i) => (
+                    <div key={i} className={styles.linkItem}>
+                      <span className={styles.linkItemIcon}>☑</span>
+                      <span className={styles.linkItemUrl}>{item}</span>
+                      <button
+                        type="button"
+                        className={styles.removeBtn}
+                        onClick={() => setChecklist((prev) => prev.filter((_, j) => j !== i))}
+                      >✕</button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className={styles.tabEmpty}>No checklist items yet. Add one above, or pick a template that has one.</p>
+              )}
+            </div>
+          )}
+
+          {/* ── Links tab ── */}
+          {createTab === 'links' && (
+            <div className={styles.modalTabContent}>
+              <div className={styles.field}>
+                <label>Add Link</label>
+                <div className={styles.linkRow}>
+                  <input
+                    value={linkInput}
+                    onChange={(e) => setLinkInput(e.target.value)}
+                    placeholder="https://..."
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addLink(); } }}
+                    autoFocus
+                  />
+                  <Button size="sm" onClick={addLink} disabled={!linkInput.trim()}>Add</Button>
+                </div>
+              </div>
+              {links.length > 0 ? (
+                <div className={styles.linkItemList}>
+                  {links.map((url, i) => (
+                    <div key={i} className={styles.linkItem}>
+                      <span className={styles.linkItemIcon}>🔗</span>
+                      <a href={url} target="_blank" rel="noopener noreferrer" className={styles.linkItemUrl}>{url}</a>
+                      <button
+                        type="button"
+                        className={styles.removeBtn}
+                        onClick={() => setLinks((prev) => prev.filter((_, j) => j !== i))}
+                      >✕</button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className={styles.tabEmpty}>No links added yet. Paste a URL above and press Add.</p>
+              )}
+            </div>
+          )}
+
+          {/* ── Files tab ── */}
+          {createTab === 'files' && (
+            <div className={styles.modalTabContent}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className={styles.fileInputHidden}
+                onChange={(e) => { if (e.target.files) uploadFiles(e.target.files); e.target.value = ''; }}
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip"
+              />
+
+              {/* Uploaded file list — shown FIRST so it's always visible */}
+              {attachments.length > 0 && (
+                <div className={styles.attachList}>
+                  {attachments.map((a, i) => (
+                    <div key={a.url} className={styles.attachItem}>
+                      {a.type === 'image' ? (
+                        <div className={styles.previewThumb}>
+                          <img src={`${API_BASE}${a.url}`} alt={a.name} />
+                        </div>
+                      ) : (
+                        <span className={styles.attachIcon}>📄</span>
+                      )}
+                      <div className={styles.attachInfo}>
+                        <a href={`${API_BASE}${a.url}`} target="_blank" rel="noopener noreferrer" className={styles.attachName}>{a.name}</a>
+                      </div>
+                      <button
+                        type="button"
+                        className={styles.removeBtn}
+                        onClick={() => setAttachments((prev) => prev.filter((_, j) => j !== i))}
+                      >✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Drop zone — compact when files already uploaded */}
+              <div
+                className={`${styles.dropZone} ${attachments.length > 0 ? styles.dropZoneCompact : ''} ${isDragging ? styles.dropZoneActive : ''} ${fileUploading ? styles.dropZoneUploading : ''}`}
+                onClick={() => !fileUploading && fileInputRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files); }}
+              >
+                <span className={styles.dropZoneIcon}>{fileUploading ? '⏳' : '📎'}</span>
+                <span className={styles.dropZoneText}>
+                  {fileUploading ? 'Uploading…' : <><u>Click to browse</u> or drag &amp; drop</>}
+                </span>
+                {!attachments.length && <span className={styles.dropZoneSub}>Images, PDFs, docs — max 1 GB each</span>}
+              </div>
+              {fileUploadError && <p className={styles.uploadError}>{fileUploadError}</p>}
+              {attachments.length === 0 && !fileUploading && (
+                <p className={styles.tabEmpty}>No files attached yet.</p>
+              )}
+            </div>
+          )}
+
+          {/* ── Always-visible actions ── */}
+          <div className={styles.actions}>
+            <Button variant="ghost" onClick={() => { setShowCreate(false); resetCreateForm(); }} disabled={saving}>Cancel</Button>
+            <Button onClick={handleCreate} loading={saving} disabled={!form.title.trim() || fileUploading}>
+              Create Task
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Task detail modal */}
+      <TaskModal
+        task={selectedTask}
+        isOpen={showTaskModal}
+        onClose={() => { setShowTaskModal(false); setSelectedTask(null); }}
+        onUpdate={handleTaskUpdate}
+        onDelete={(t) => { setShowTaskModal(false); setSelectedTask(null); setDeleteConfirm(t); }}
+        onSaved={() => { setShowTaskModal(false); setSelectedTask(null); showSuccess('Task Updated!', 'All changes have been saved.'); }}
+        members={members}
+        projects={projects}
+        patchTimer={patchTimer}
+      />
+
+      <SuccessPopup
+        visible={successPopup.visible}
+        title={successPopup.title}
+        subtitle={successPopup.subtitle}
+        onDone={hideSuccess}
+      />
+
+      {/* Delegate modal */}
+      <Modal
+        isOpen={!!delegateModal}
+        onClose={() => { setDelegateModal(null); }}
+        title="Delegate Task"
+        size="sm"
+      >
+        {delegateModal && (
+          <div className={styles.delegateModalBody}>
+            <p className={styles.delegateModalTask}>
+              <CheckSquare size={13} style={{ flexShrink: 0, marginTop: 2 }} />
+              <span>{delegateModal.task.title}</span>
+            </p>
+
+            <div className={styles.delegateModalField}>
+              <label>Delegate to</label>
+              <select
+                value={delegateModal.delegateTo}
+                onChange={(e) => setDelegateModal((m) => m ? { ...m, delegateTo: e.target.value, error: '' } : null)}
+                autoFocus
+              >
+                <option value="">Select a team member…</option>
+                {delegatableMembers.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.delegateModalField}>
+              <label>Note <span className={styles.delegateOptional}>(optional)</span></label>
+              <textarea
+                rows={3}
+                placeholder="Add context about why you're delegating…"
+                value={delegateModal.note}
+                onChange={(e) => setDelegateModal((m) => m ? { ...m, note: e.target.value } : null)}
+              />
+            </div>
+
+            {delegateModal.error && (
+              <p className={styles.delegateModalError}>{delegateModal.error}</p>
+            )}
+
+            <div className={styles.delegateModalActions}>
+              <Button variant="ghost" onClick={() => setDelegateModal(null)} disabled={delegating}>
+                Cancel
+              </Button>
+              <Button onClick={handleDelegateSubmit} loading={delegating} disabled={!delegateModal.delegateTo}>
+                Delegate
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Bulk delete confirm */}
+      <Modal isOpen={bulkDeleteConfirm} onClose={() => setBulkDeleteConfirm(false)} title="Delete Tasks" size="sm">
+        <div className={styles.deleteConfirm}>
+          <p>Are you sure you want to delete <strong>{selectedIds.size} task{selectedIds.size > 1 ? 's' : ''}</strong>? This cannot be undone.</p>
+          <div className={styles.actions}>
+            <Button variant="secondary" onClick={() => setBulkDeleteConfirm(false)}>Cancel</Button>
+            <Button variant="danger" onClick={handleBulkDelete} loading={bulkWorking}>Delete</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete confirm */}
+      <Modal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Delete Task" size="sm">
+        <div className={styles.deleteConfirm}>
+          <p>Are you sure you want to delete <strong>{deleteConfirm?.title}</strong>? This cannot be undone.</p>
+          <div className={styles.actions}>
+            <Button variant="secondary" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+            <Button variant="danger" onClick={handleDelete} loading={deleting}>Delete</Button>
+          </div>
+        </div>
+      </Modal>
+    </AppShell>
+  );
+}
+
+function TaskRow({
+  task,
+  currentUserId,
+  isAdminOrManager,
+  onStatusChange,
+  onTimerUpdate,
+  onDelete,
+  onClick,
+  patchTimer,
+  delegatableMembers,
+  onDelegateClick,
+  selected,
+  onToggleSelect,
+}: {
+  task: Task;
+  currentUserId: string;
+  isAdminOrManager: boolean;
+  onStatusChange: (t: Task, status: string) => void;
+  onTimerUpdate: (updated: Task) => void;
+  onDelete: (t: Task) => void;
+  onClick: (t: Task) => void;
+  patchTimer: (id: string, action: 'start' | 'pause' | 'resume' | 'hold' | 'finish') => Promise<Task | null>;
+  delegatableMembers: { id: string; name: string }[];
+  onDelegateClick: (task: Task) => void;
+  selected: boolean;
+  onToggleSelect: (id: string) => void;
+}) {
+  const isOverdue = task.dueDate && task.status !== 'done' && new Date(task.dueDate) < new Date();
+
+  const effectivePriority: keyof typeof priorityVariant =
+    isOverdue ? 'critical' : task.priority;
+
+  const isSelfAssigned = task.assignees.filter(Boolean).some(
+    (a) => ((a as any)._id?.toString() || a.id) === currentUserId
+  );
+  const canDelegate = isSelfAssigned && delegatableMembers.length > 0;
+
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
+
+  const renderWorkflowBtn = () => {
+    if (task.status === 'backlog') {
+      return (
+        <button className={`${styles.statusBtn} ${styles.statusStart}`} onClick={(e) => { stop(e); onStatusChange(task, 'todo'); }}>
+          → Todo
+        </button>
+      );
+    }
+    if (task.status === 'done') {
+      return (
+        <button className={`${styles.statusBtn} ${styles.statusReopen}`} onClick={(e) => { stop(e); onStatusChange(task, 'todo'); }}>
+          ↩ Reopen
+        </button>
+      );
+    }
+    return null;
+  };
+
+  const act = async (action: 'start' | 'pause' | 'resume' | 'hold' | 'finish') => {
+    const updated = await patchTimer(task._id, action);
+    if (updated) onTimerUpdate(updated);
+  };
+
+  const reporterId = (task.reporter?.id || (task.reporter as any)?._id)?.toString() ?? '';
+  const canDelete = isAdminOrManager || (reporterId && reporterId === currentUserId);
+  const accentClass = statusAccent[task.status] ?? '';
+
+  return (
+    <div
+      className={`${styles.taskRow} ${accentClass} ${task.status === 'done' ? styles.taskDone : ''} ${isOverdue ? styles.taskRowOverdue : ''} ${selected ? styles.taskRowSelected : ''}`}
+      onClick={() => onClick(task)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === 'Enter' && onClick(task)}
+    >
+      <div
+        className={styles.checkboxCol}
+        onClick={(e) => { e.stopPropagation(); onToggleSelect(task._id); }}
+      >
+        <span className={`${styles.checkbox} ${selected ? styles.checkboxChecked : ''}`}>
+          {selected && <Check size={10} strokeWidth={3} />}
+        </span>
+      </div>
+
+      <div className={styles.stepIndicator}>
+        <div className={`${styles.stepDot} ${styles[`step_${task.status}`]}`} title={task.status.replace(/_/g, ' ')} />
+      </div>
+
+      <div className={styles.taskMain}>
+        <div className={styles.taskTitle}>
+          <span className={styles.taskTitleText}>{task.title}</span>
+          {task.isPersonal && <span className={styles.personalBadge}>Personal</span>}
+          {task.remark && <span className={styles.remarkBadge}>{task.remark}</span>}
+        </div>
+        <div className={styles.taskMeta}>
+          {task.project && typeof task.project === 'object' && (
+            <span className={styles.projectName}>{task.project.title}</span>
+          )}
+          {task.dueDate && (
+            <span className={`${styles.dueDate} ${isOverdue ? styles.dueDateOverdue : ''}`}>
+              {isOverdue ? '⚠ ' : ''}{formatDate(task.dueDate)}
+            </span>
+          )}
+          <Badge variant={priorityVariant[effectivePriority]} size="sm">
+              {isOverdue && task.priority !== 'critical' ? 'critical ⚠' : effectivePriority}
+            </Badge>
+          {task.checklist && task.checklist.length > 0 && (
+            <Badge
+              variant={task.checklist.every((c) => c.completed) ? 'success' : 'default'}
+              size="sm"
+            >
+              <CheckSquare size={11} style={{ marginRight: 3 }} /> {task.checklist.filter((c) => c.completed).length}/{task.checklist.length}
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      <div className={styles.taskRight} onClick={stop}>
+        {task.assignees.filter(Boolean).length > 0 && (
+          <div className={styles.assignees}>
+            {task.assignees.filter(Boolean).slice(0, 3).map((a) => {
+              const aId = (a as any)._id?.toString() || a.id;
+              const isSelf = aId === currentUserId;
+              return (
+                <span
+                  key={aId || a.email}
+                  className={`${styles.assigneeChip} ${isSelf && canDelegate ? styles.assigneeChipSelf : ''}`}
+                  onClick={isSelf && canDelegate ? (e) => { stop(e); onDelegateClick(task); } : undefined}
+                  title={isSelf && canDelegate ? 'Click to delegate' : undefined}
+                >
+                  <Avatar name={a.name || '?'} src={a.avatar} size="sm" />
+                  <span className={styles.assigneeName}>{a.name}</span>
+                  {isSelf && canDelegate && (
+                    <CornerUpRight size={9} strokeWidth={2.5} className={styles.delegateChevron} />
+                  )}
+                </span>
+              );
+            })}
+            {task.assignees.filter(Boolean).length > 3 && (
+              <span className={styles.assigneeMore}>+{task.assignees.filter(Boolean).length - 3}</span>
+            )}
+          </div>
+        )}
+
+        <div className={styles.statusActions}>
+          {renderWorkflowBtn()}
+          {task.status !== 'backlog' && (
+            <TaskTimer task={task} onUpdate={onTimerUpdate} overrideAct={act} />
+          )}
+        </div>
+
+        <span className={styles.hours}>
+          {Math.floor(task.totalElapsedSeconds / 60)}m
+        </span>
+
+        {canDelete && (
+          <button className={styles.deleteBtn} onClick={(e) => { stop(e); onDelete(task); }} title="Delete task">
+            ✕
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

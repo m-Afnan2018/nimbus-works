@@ -1,0 +1,137 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text3);
+  font-size: 13px;
+  padding: 30px 0;
+  justify-content: center;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 10px;
+  text-align: center;
+  color: var(--text3);
+  font-size: 28px;
+}
+.emptyTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+}
+.emptySub {
+  font-size: 12px;
+  max-width: 320px;
+  line-height: 1.5;
+}
+
+.group {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.groupHeader {
+  padding: 12px 14px;
+  background: var(--surface2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.groupTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.groupCount {
+  font-size: 11px;
+  color: var(--text3);
+  font-weight: 600;
+}
+
+.progressTrack {
+  height: 5px;
+  background: var(--bg3);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 0 14px;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--emerald);
+  border-radius: 3px;
+  transition: width 0.2s;
+}
+
+.steps {
+  padding: 8px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 8px;
+}
+.stepActive {
+  background: var(--indigo-dim);
+}
+
+.stepOrder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.stepTitle {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stepDept {
+  font-size: 10px;
+  color: var(--text3);
+  white-space: nowrap;
+}
+
+.stepStatus {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}

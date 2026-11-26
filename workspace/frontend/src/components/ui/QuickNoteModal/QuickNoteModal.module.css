@@ -1,0 +1,91 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+  padding: 1rem;
+}
+
+.noteEditor {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  box-shadow: var(--shadow-lg);
+}
+
+.editorTitle {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.noteTitleInput {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: 0.625rem 0.875rem;
+  font-size: 1rem;
+  font-weight: 600;
+  outline: none;
+  width: 100%;
+  font-family: var(--font-body);
+}
+
+.noteTitleInput:focus {
+  border-color: var(--primary);
+}
+
+.noteContentInput {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.9375rem;
+  outline: none;
+  width: 100%;
+  resize: vertical;
+  font-family: var(--font-body);
+}
+
+.noteContentInput:focus {
+  border-color: var(--primary);
+}
+
+.colorPicker {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.colorDot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform var(--transition);
+}
+
+.colorDot:hover {
+  transform: scale(1.15);
+}
+
+.colorActive {
+  border-color: var(--text-primary);
+  transform: scale(1.1);
+}
+
+.editorActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}

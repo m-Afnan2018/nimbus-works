@@ -1,0 +1,110 @@
+.creds {
+  margin-top: 1.25rem;
+  padding: 0.875rem;
+  border: 1px dashed var(--primary, #6366f1);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary, #6366f1) 6%, transparent);
+  font-size: 0.8125rem;
+}
+
+.credsHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.625rem;
+  color: var(--text-muted, #6b7280);
+}
+
+.credsHead code {
+  font-weight: 600;
+}
+
+.badge {
+  background: var(--primary, #6366f1);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.credsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.credBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.credBtn span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  color: var(--text-muted, #6b7280);
+}
+
+.credBtn:hover:not(:disabled) {
+  border-color: var(--primary, #6366f1);
+  transform: translateY(-1px);
+}
+
+.credBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.credsNote {
+  margin: 0.625rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted, #6b7280);
+}
+
+.banner {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 40px 6px 16px;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+.banner button {
+  position: absolute;
+  right: 10px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 1.125rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@media (max-width: 480px) {
+  .credsGrid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,502 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.calendar {
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 0.875rem 1rem;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 0.5rem;
+}
+
+.dayHeader {
+  text-align: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  padding: 0.5rem 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.empty {
+  height: 54px;
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition);
+  cursor: pointer;
+  height: 54px;
+  position: relative;
+}
+
+.day:hover {
+  background: var(--card);
+}
+
+.selected {
+  background: var(--primary-light) !important;
+  outline: 1px solid var(--primary);
+}
+
+.weekend {
+  opacity: 0.4;
+}
+
+.dayNumber {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.indicators {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.indicator {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.lateIndicator {
+  background: var(--warning) !important;
+  border: 1px solid #fff;
+}
+
+.noteIndicator {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.eventDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Legend */
+.legend {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.noteDot {
+  background: var(--text-muted);
+}
+
+/* Modal record content */
+.recordInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.recordGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.recordRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.recordRow:last-child {
+  border-bottom: none;
+}
+
+.rowLabel {
+  color: var(--text-muted);
+  min-width: 80px;
+  font-size: 0.8125rem;
+}
+
+.recordStatus {
+  font-weight: 600;
+  text-transform: capitalize;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lateBadge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: var(--warning-light, #fef3c7);
+  color: var(--warning, #f59e0b);
+  padding: 0.1rem 0.4rem;
+  border-radius: 99px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.noRecord {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.notesList {
+  border-top: 1px solid var(--border);
+  padding-top: 0.625rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.notesLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.noteEntry {
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.noteEntryHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.noteContent {
+  flex: 1;
+  margin: 0;
+}
+
+.deleteNoteBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+  transition: color var(--transition);
+}
+
+.deleteNoteBtn:hover {
+  color: var(--danger);
+}
+
+.deleteNoteBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.noteError {
+  font-size: 0.8125rem;
+  color: var(--danger);
+  margin: 0;
+}
+
+.noteLink {
+  font-size: 0.75rem;
+  color: var(--primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Add note form */
+.addNote {
+  border-top: 1px solid var(--border);
+  padding-top: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.addNoteLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.noteInput {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  resize: vertical;
+  outline: none;
+  width: 100%;
+}
+
+.noteInput:focus {
+  border-color: var(--primary);
+}
+
+.linkRow {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.linkInput {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8125rem;
+  outline: none;
+}
+
+.linkInput:focus {
+  border-color: var(--primary);
+}
+
+.addLinkBtn {
+  background: var(--primary-light);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-md);
+  color: var(--primary);
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.linkChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.linkChip {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1875rem 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+}
+
+.linkChip button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  padding: 0;
+  line-height: 1;
+}
+
+/* ── Admin edit ───────────────────────────────────────────────────── */
+.adminEditBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background: var(--primary-light);
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition);
+  margin-bottom: 0.5rem;
+}
+.adminEditBtn:hover { opacity: 0.85; }
+
+.adminCreateBtn {
+  margin-top: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity var(--transition);
+}
+.adminCreateBtn:hover { opacity: 0.88; }
+
+.adminForm {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.adminFormGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.625rem;
+}
+
+.adminFormRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.adminFormRow label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.adminFormRow input,
+.adminFormRow select {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 0.4rem 0.6rem;
+  font-size: 0.875rem;
+  outline: none;
+  width: 100%;
+  transition: border-color var(--transition);
+}
+.adminFormRow input:focus,
+.adminFormRow select:focus { border-color: var(--primary); }
+
+.adminCheckRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.adminCheckRow input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.adminFormActions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  padding-top: 0.25rem;
+}
+
+.adminSaveBtn {
+  padding: 0.4rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity var(--transition);
+}
+.adminSaveBtn:hover:not(:disabled) { opacity: 0.88; }
+.adminSaveBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.adminCancelBtn {
+  padding: 0.4rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: none;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.adminCancelBtn:hover { background: var(--card); }
+
+.adminError {
+  font-size: 0.8125rem;
+  color: var(--danger);
+  margin: 0;
+}
+
+.adminNote {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0;
+  font-style: italic;
+}
+
+.noRecordWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
